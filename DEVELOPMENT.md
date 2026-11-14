@@ -2,7 +2,7 @@
 
 ## Status
 - M0 done: Tauri 2 + React + TS scaffold runs (`bun tauri dev`).
-- M1 done: page 1 renders in the app window via a Tauri command + canvas
+- M1 done: documents stay open in a DocRegistry keyed by id
 
 ## Decisions
 - PDF-first MVP; DOCX/PPTX read-only later.
@@ -18,7 +18,7 @@
 - Check Rust only: `cargo check` (from src-tauri)
 
 ## Known issues
-- First DLL load once took 2.6 s (probably antivirus scanning), re-measure later.
+- render commands run synchronously and may block the UI on huge pages
 
 ## Next
 - Page navigation, then open-any-PDF
