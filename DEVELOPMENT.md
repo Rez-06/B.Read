@@ -2,7 +2,7 @@
 
 ## Status
 - M0 done: Tauri 2 + React + TS scaffold runs (`bun tauri dev`).
-- M1 done: pdfium-render 0.9.5 renders page 1 of a test PDF to PNG (~20 ms, debug build).
+- M1 done: page 1 renders in the app window via a Tauri command + canvas
 
 ## Decisions
 - PDF-first MVP; DOCX/PPTX read-only later.
@@ -21,4 +21,4 @@
 - First DLL load once took 2.6 s (probably antivirus scanning), re-measure later.
 
 ## Next
-- Show a rendered PDF page in the app window.
+- Page navigation, then open-any-PDF
