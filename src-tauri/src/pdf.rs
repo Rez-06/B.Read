@@ -8,6 +8,11 @@ use std::sync::{Mutex, OnceLock};
 use tauri::ipc::Response;
 use tauri::State;
 
+/// After this many page touches (renders + size lookups) the document is reopened,
+/// because PDFium keeps roughly 1.5 MB per touched page until the document is dropped.
+/// Measured on one image-heavy 101 MB PDF; tune with other documents.
+const RECYCLE_AFTER: u32 = 60;
+
 /// PDFium can only be bound once per process, so it lives here, shared.
 static PDFIUM: OnceLock<Result<Pdfium, String>> = OnceLock::new();
 
@@ -26,10 +31,32 @@ fn pdfium() -> Result<&'static Pdfium, String> {
         .map_err(|e| e.clone())
 }
 
+struct OpenPdf {
+    path: String,
+    document: PdfDocument<'static>,
+    /// Pages touched since the document was last (re)opened.
+    touched: u32,
+}
+
+/// Records page touches and reopens the document when too many have piled up.
+fn touch(entry: &mut OpenPdf, pages: u32) -> Result<(), String> {
+    entry.touched += pages;
+    if entry.touched >= RECYCLE_AFTER {
+        let t0 = std::time::Instant::now();
+        let fresh = pdfium()?
+            .load_pdf_from_file(&entry.path, None)
+            .map_err(|e| e.to_string())?;
+        entry.document = fresh; // the old document is dropped here
+        entry.touched = 0;
+        eprintln!("[recycle] reopened in {:?}", t0.elapsed());
+    }
+    Ok(())
+}
+
 /// All open PDFs, keyed by a numeric id the frontend holds on to.
 #[derive(Default)]
 pub struct DocRegistry {
-    docs: Mutex<HashMap<u32, PdfDocument<'static>>>,
+    docs: Mutex<HashMap<u32, OpenPdf>>,
     next_id: AtomicU32,
 }
 
@@ -38,21 +65,39 @@ pub struct DocRegistry {
 pub struct OpenedDoc {
     id: u32,
     page_count: u32,
+    /// [width, height] of page 1 in PDF points (1/72 inch)
+    first_page_size: [f32; 2],
 }
 
 #[tauri::command]
 pub fn open_pdf(path: String, registry: State<'_, DocRegistry>) -> Result<OpenedDoc, String> {
+    let t0 = std::time::Instant::now();
     let document = pdfium()?
         .load_pdf_from_file(&path, None)
         .map_err(|e| e.to_string())?;
-    let page_count = document.pages().len() as u32;
+    let t_load = t0.elapsed();
+    let (page_count, first_page_size) = {
+        let pages = document.pages();
+        let count = pages.len() as u32;
+        if count == 0 {
+            return Err("this PDF has no pages".into());
+        }
+        let r = pages.page_size(0).map_err(|e| e.to_string())?;
+        (count, [r.width().value, r.height().value])
+    };
+    eprintln!(
+        "[open] {} pages | load {:?} | first page size {:?}",
+        page_count,
+        t_load,
+        t0.elapsed() - t_load
+    );
     let id = registry.next_id.fetch_add(1, Ordering::Relaxed) + 1;
     registry
         .docs
         .lock()
         .map_err(|e| e.to_string())?
-        .insert(id, document);
-    Ok(OpenedDoc { id, page_count })
+        .insert(id, OpenPdf { path, document, touched: 1 });
+    Ok(OpenedDoc { id, page_count, first_page_size })
 }
 
 #[tauri::command]
@@ -60,6 +105,30 @@ pub fn close_pdf(id: u32, registry: State<'_, DocRegistry>) {
     if let Ok(mut docs) = registry.docs.lock() {
         docs.remove(&id); // dropping the document releases it
     }
+}
+
+/// Sizes (in PDF points) for pages start..start+count, clipped to the page count.
+#[tauri::command]
+pub fn page_sizes(
+    id: u32,
+    start: u32,
+    count: u32,
+    registry: State<'_, DocRegistry>,
+) -> Result<Vec<[f32; 2]>, String> {
+    let mut docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get_mut(&id).ok_or("document is not open")?;
+    let out = {
+        let pages = entry.document.pages();
+        let end = (start + count).min(pages.len() as u32);
+        let mut out = Vec::new();
+        for i in start..end {
+            let r = pages.page_size(i as _).map_err(|e| e.to_string())?;
+            out.push([r.width().value, r.height().value]);
+        }
+        out
+    };
+    touch(entry, out.len() as u32)?;
+    Ok(out)
 }
 
 #[tauri::command]
@@ -75,39 +144,25 @@ pub fn render_page(
 }
 
 /// Returns [width: u32 LE][height: u32 LE][RGBA pixels...]
-/// Returns [width: u32 LE][height: u32 LE][RGBA pixels...]
 pub fn render(
     registry: &DocRegistry,
     id: u32,
     page_index: u16,
     width: i32,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
-    let t0 = std::time::Instant::now();
-    let docs = registry.docs.lock().map_err(|e| e.to_string())?;
-    let document = docs.get(&id).ok_or("document is not open")?;
-    let page = document.pages().get(page_index.into())?;
-    let t_open = t0.elapsed();
+    let mut docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get_mut(&id).ok_or("document is not open")?;
+    let out = {
+        let page = entry.document.pages().get(page_index.into())?;
+        let config = PdfRenderConfig::new().set_target_width(width);
+        let image = page.render_with_config(&config)?.as_image()?.to_rgba8();
 
-    let config = PdfRenderConfig::new().set_target_width(width);
-    let bitmap = page.render_with_config(&config)?;
-    let t_render = t0.elapsed();
-
-    let image = bitmap.as_image()?.to_rgba8();
-    let t_convert = t0.elapsed();
-
-    let mut out = Vec::with_capacity(8 + image.as_raw().len());
-    out.extend_from_slice(&image.width().to_le_bytes());
-    out.extend_from_slice(&image.height().to_le_bytes());
-    out.extend_from_slice(image.as_raw());
-
-    eprintln!(
-        "[render] page {} | get page {:?} | pdfium render {:?} | convert {:?} | total {:?} | {} KB",
-        page_index,
-        t_open,
-        t_render - t_open,
-        t_convert - t_render,
-        t0.elapsed(),
-        out.len() / 1024
-    );
+        let mut out = Vec::with_capacity(8 + image.as_raw().len());
+        out.extend_from_slice(&image.width().to_le_bytes());
+        out.extend_from_slice(&image.height().to_le_bytes());
+        out.extend_from_slice(image.as_raw());
+        out
+    };
+    touch(entry, 1)?;
     Ok(out)
 }
