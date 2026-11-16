@@ -2,9 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { invoke } from "@tauri-apps/api/core";
 
 const GAP = 12; // px between pages
-const SCALE = 96 / 72; // PDF points -> CSS px at 100% zoom
+const BASE = 96 / 72; // PDF points -> CSS px at 100% zoom
 const CHUNK = 8; // pages whose sizes are fetched per request
 const MAX_CACHE = 12; // rendered pages kept in memory
+const MAX_RENDER_PX = 1800; // cap on rendered bitmap width (transfer cost grows with size)
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
 const LOAD_SIZES = true;
 
 type Size = [number, number];
@@ -41,6 +44,11 @@ export default function ContinuousView({
     Array.from({ length: pageCount }, () => firstPageSize),
   );
   const [loaded, setLoaded] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
+  const scale = zoom * BASE; // PDF points -> CSS px
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
   const rangeRef = useRef<[number, number]>([0, 0]);
   const anchorRef = useRef({ index: 0, delta: -GAP });
 
@@ -59,11 +67,11 @@ export default function ContinuousView({
     let maxWidth = 0;
     for (const [w, h] of sizes) {
       tops.push(y);
-      y += h * SCALE + GAP;
-      maxWidth = Math.max(maxWidth, w * SCALE);
+      y += h * scale + GAP;
+      maxWidth = Math.max(maxWidth, w * scale);
     }
     return { tops, total: y, maxWidth };
-  }, [sizes]);
+  }, [sizes, scale]);
 
   const indexAt = useCallback(
     (y: number) => {
@@ -89,6 +97,7 @@ export default function ContinuousView({
     setRange((prev) => (prev[0] === first && prev[1] === last ? prev : [first, last]));
   }, [indexAt, layout]);
 
+  // When the layout changes (real sizes arrive, zoom changes), keep the anchor page in place.
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -133,16 +142,16 @@ export default function ContinuousView({
 
         const next = wanted.find((i) => {
           const e = cache.get(i);
-          return !e || e.cssW !== Math.round(sizesRef.current[i][0] * SCALE);
+          return !e || e.cssW !== Math.round(sizesRef.current[i][0] * scaleRef.current);
         });
         if (next === undefined) break;
 
-        const cssW = Math.round(sizesRef.current[next][0] * SCALE);
+        const cssW = Math.round(sizesRef.current[next][0] * scaleRef.current);
         const t0 = performance.now();
         const buf = await invoke<ArrayBuffer>("render_page", {
           id: docId,
           pageIndex: next,
-          width: Math.round(cssW * window.devicePixelRatio),
+          width: Math.min(Math.round(cssW * window.devicePixelRatio), MAX_RENDER_PX),
         });
         const view = new DataView(buf);
         const w = view.getUint32(0, true);
@@ -183,7 +192,7 @@ export default function ContinuousView({
 
   useEffect(() => {
     pump();
-  }, [pump, range, sizes, version]);
+  }, [pump, range, sizes, version, zoom]);
 
   // Background loader: real page sizes, chunks nearest the viewport first.
   useEffect(() => {
@@ -238,11 +247,49 @@ export default function ContinuousView({
     };
   }, [docId, pageCount]);
 
+  // Zoom keeps the page at the top of the viewport (and your position within it) in place.
+  const zoomTo = useCallback((next: number) => {
+    const clamped = Math.min(Math.max(next, ZOOM_MIN), ZOOM_MAX);
+    const prev = zoomRef.current;
+    if (clamped === prev) return;
+    const a = anchorRef.current;
+    if (a.delta > 0) anchorRef.current = { ...a, delta: (a.delta * clamped) / prev };
+    zoomRef.current = clamped;
+    setZoom(clamped);
+  }, []);
+
+  const fitWidth = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const widest = Math.max(...sizesRef.current.map((s) => s[0]));
+    zoomTo((el.clientWidth - 2 * GAP) / (widest * BASE));
+  }, [zoomTo]);
+
+  // Ctrl + mouse wheel zooms (needs a non-passive listener to block browser zoom).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      zoomTo(zoomRef.current * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [zoomTo]);
+
   return (
     <div>
-      <div style={{ marginBottom: 8, opacity: 0.8 }}>
-        Visible: pages {range[0] + 1}–{range[1] + 1} of {pageCount} · sizes {loaded}/{pageCount} ·
-        cached {cacheRef.current.size} · last render {lastMs ?? "–"} ms
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <button onClick={() => zoomTo(zoomRef.current / 1.25)}>−</button>
+        <span style={{ minWidth: 48, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
+        <button onClick={() => zoomTo(zoomRef.current * 1.25)}>+</button>
+        <button onClick={() => zoomTo(1)}>100%</button>
+        <button onClick={fitWidth}>Fit width</button>
+        <span style={{ opacity: 0.8 }}>
+          Pages {range[0] + 1}–{range[1] + 1} of {pageCount} · sizes {loaded}/{pageCount} · cached{" "}
+          {cacheRef.current.size} · last render {lastMs ?? "–"} ms
+        </span>
       </div>
       <div
         ref={scrollRef}
@@ -267,9 +314,9 @@ export default function ContinuousView({
                 style={{
                   position: "absolute",
                   top: layout.tops[i],
-                  left: (layout.maxWidth - w * SCALE) / 2,
-                  width: w * SCALE,
-                  height: h * SCALE,
+                  left: (layout.maxWidth - w * scale) / 2,
+                  width: w * scale,
+                  height: h * scale,
                   background: visible ? "#fff" : "#8a8a8a",
                   color: "#000",
                   overflow: "hidden",
@@ -280,7 +327,7 @@ export default function ContinuousView({
                 }}
               >
                 {entry ? (
-                  <PageBitmap bitmap={entry.bitmap} width={w * SCALE} height={h * SCALE} />
+                  <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
                 ) : (
                   <>Page {i + 1}</>
                 )}
