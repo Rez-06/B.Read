@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Thumbnails from "./Thumbnails";
+import SearchBar from "./SearchBar";
+import MatchOverlay from "./MatchOverlay";
 
 const GAP = 12; // px between pages
 const BASE = 96 / 72; // PDF points -> CSS px at 100% zoom
@@ -44,6 +46,7 @@ export default function ContinuousView({
   const [sizes, setSizes] = useState<Size[]>(() =>
     Array.from({ length: pageCount }, () => firstPageSize),
   );
+  const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [current, setCurrent] = useState(0);
@@ -337,6 +340,7 @@ export default function ContinuousView({
           style={{ width: 64 }}
         />
         <span>/ {pageCount}</span>
+                <SearchBar docId={docId} pageCount={pageCount} current={current} onGoTo={goTo} onQuery={setQuery} />
         <button onClick={() => zoomTo(zoomRef.current / 1.25)}>−</button>
         <span style={{ minWidth: 48, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
         <button onClick={() => zoomTo(zoomRef.current * 1.25)}>+</button>
@@ -401,7 +405,7 @@ export default function ContinuousView({
                     justifyContent: "center",
                     fontSize: 14,
                   }}
-                >
+                >                   {query && nearby && <MatchOverlay docId={docId} query={query} page={i} scale={scale} />}
                   {entry ? (
                     <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
                   ) : (

@@ -10,7 +10,9 @@ pub fn run() {
             pdf::open_pdf,
             pdf::close_pdf,
             pdf::render_page,
-            pdf::page_sizes
+            pdf::page_sizes,
+            pdf::search_pages,
+            pdf::page_matches
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

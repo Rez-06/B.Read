@@ -6,6 +6,11 @@
 - M3 core works: continuous scroll, lazy sizes, visible-page rendering, 12-page bitmap cache
 - Automatic document recycling after 60 page touches caps PDFium memory at about 100–120 MB (was ~580 MB) on the 101 MB / 362-page test PDF.
 - continuous scroll, lazy sizes, zoom (25–400%, fit width, Ctrl+wheel), recycling
+- humbnail sidebar (40-bitmap cache, loads only while the main view is idle)
+- text search across the whole document (chunked, cancellable, Bangla confirmed on one PDF), result list, previous/next hit page
+- search highlights drawn from PDFium match rectangles; verified on several PDFs
+
+
 
 ## Decisions
 - PDF-first MVP; DOCX/PPTX read-only later.
@@ -30,6 +35,9 @@
 - [profile.dev.package."*"] opt-level = 3 in Cargo.toml so dependency timings in dev builds are meaningful.
 - Open question: pdfium time per page varied 5-130 ms in one run (lock contention from overlapping requests?). Re-measure under controlled conditions.
 - Test with text-only and slide PDFs; recycle visibility is unconfirmed; memory baseline right after open is ~120 MB peak
+- thumbnails assume all pages match page 1’s shape
+- highlight rects assume unrotated pages with no crop offset
+- toolbar cramped, window scrolls so Open PDF hides, replace with real shell
 
 ## Next
 - thumbnails, text selection, search, bookmarks, tabs/ribbon shell

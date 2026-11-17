@@ -131,6 +131,79 @@ pub fn page_sizes(
     Ok(out)
 }
 
+/// Pages with matches for `query` among pages start..start+count: [(page index, match count)].
+#[tauri::command]
+pub fn search_pages(
+    id: u32,
+    query: String,
+    start: u32,
+    count: u32,
+    registry: State<'_, DocRegistry>,
+) -> Result<Vec<[u32; 2]>, String> {
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get_mut(&id).ok_or("document is not open")?;
+    let (hits, scanned) = {
+        let pages = entry.document.pages();
+        let end = (start + count).min(pages.len() as u32);
+        let options = PdfSearchOptions::new();
+        let mut hits = Vec::new();
+        for i in start..end {
+            let page = pages.get(i as _).map_err(|e| e.to_string())?;
+            let text = page.text().map_err(|e| e.to_string())?;
+            let search = text.search(&query, &options).map_err(|e| e.to_string())?;
+            let n = search.iter(PdfSearchDirection::SearchForward).count() as u32;
+            if n > 0 {
+                hits.push([i, n]);
+            }
+        }
+        (hits, end.saturating_sub(start))
+    };
+    touch(entry, scanned)?;
+    Ok(hits)
+}
+
+/// Match rectangles on one page as [left, top, width, height] in PDF points,
+/// measured from the page's top-left corner.
+#[tauri::command]
+pub fn page_matches(
+    id: u32,
+    page_index: u32,
+    query: String,
+    registry: State<'_, DocRegistry>,
+) -> Result<Vec<[f32; 4]>, String> {
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get_mut(&id).ok_or("document is not open")?;
+    let rects = {
+        let pages = entry.document.pages();
+        let page = pages.get(page_index as _).map_err(|e| e.to_string())?;
+        let page_height = page.height().value;
+        let text = page.text().map_err(|e| e.to_string())?;
+        let options = PdfSearchOptions::new();
+        let search = text.search(&query, &options).map_err(|e| e.to_string())?;
+        let mut rects: Vec<[f32; 4]> = Vec::new();
+        for segments in search.iter(PdfSearchDirection::SearchForward) {
+            for segment in segments.iter() {
+                let b = segment.bounds();
+                rects.push([
+                    b.left().value,
+                    page_height - b.top().value,
+                    b.width().value,
+                    b.height().value,
+                ]);
+            }
+        }
+        rects
+    };
+    touch(entry, 1)?;
+    Ok(rects)
+}
+
 #[tauri::command]
 pub fn render_page(
     id: u32,
