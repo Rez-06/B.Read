@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import Thumbnails from "./Thumbnails";
 
 const GAP = 12; // px between pages
 const BASE = 96 / 72; // PDF points -> CSS px at 100% zoom
@@ -45,6 +46,9 @@ export default function ContinuousView({
   );
   const [loaded, setLoaded] = useState(0);
   const [zoom, setZoom] = useState(1);
+  const [current, setCurrent] = useState(0);
+  const [showThumbs, setShowThumbs] = useState(true);
+  const [pageText, setPageText] = useState("1");
   const zoomRef = useRef(1);
   const scale = zoom * BASE; // PDF points -> CSS px
   const scaleRef = useRef(scale);
@@ -93,6 +97,7 @@ export default function ContinuousView({
     const first = indexAt(el.scrollTop);
     const last = indexAt(el.scrollTop + el.clientHeight);
     anchorRef.current = { index: first, delta: el.scrollTop - layout.tops[first] };
+    setCurrent(indexAt(el.scrollTop + el.clientHeight * 0.3));
     rangeRef.current = [first, last];
     setRange((prev) => (prev[0] === first && prev[1] === last ? prev : [first, last]));
   }, [indexAt, layout]);
@@ -265,6 +270,38 @@ export default function ContinuousView({
     zoomTo((el.clientWidth - 2 * GAP) / (widest * BASE));
   }, [zoomTo]);
 
+  const goTo = useCallback(
+    (index: number) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const i = Math.min(Math.max(index, 0), pageCount - 1);
+      el.scrollTop = layout.tops[i] - GAP;
+    },
+    [layout, pageCount],
+  );
+
+  // Keep the page box in sync with scrolling.
+  useEffect(() => setPageText(String(current + 1)), [current]);
+
+  // Give the scroll area keyboard focus so arrows/PageUp/PageDown/Home/End work natively.
+  useEffect(() => {
+    scrollRef.current?.focus();
+  }, []);
+
+  const onKey = (e: { ctrlKey: boolean; key: string; preventDefault(): void }) => {
+    if (!e.ctrlKey) return;
+    if (e.key === "=" || e.key === "+") {
+      e.preventDefault();
+      zoomTo(zoomRef.current * 1.25);
+    } else if (e.key === "-") {
+      e.preventDefault();
+      zoomTo(zoomRef.current / 1.25);
+    } else if (e.key === "0") {
+      e.preventDefault();
+      zoomTo(1);
+    }
+  };
+
   // Ctrl + mouse wheel zooms (needs a non-passive listener to block browser zoom).
   useEffect(() => {
     const el = scrollRef.current;
@@ -281,59 +318,99 @@ export default function ContinuousView({
   return (
     <div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <button onClick={() => setShowThumbs((s) => !s)}>
+          {showThumbs ? "Hide thumbnails" : "Thumbnails"}
+        </button>
+        <input
+          type="number"
+          min={1}
+          max={pageCount}
+          value={pageText}
+          onChange={(e) => setPageText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const n = parseInt(pageText, 10);
+              if (!Number.isNaN(n)) goTo(n - 1);
+              scrollRef.current?.focus();
+            }
+          }}
+          style={{ width: 64 }}
+        />
+        <span>/ {pageCount}</span>
         <button onClick={() => zoomTo(zoomRef.current / 1.25)}>−</button>
         <span style={{ minWidth: 48, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
         <button onClick={() => zoomTo(zoomRef.current * 1.25)}>+</button>
         <button onClick={() => zoomTo(1)}>100%</button>
         <button onClick={fitWidth}>Fit width</button>
         <span style={{ opacity: 0.8 }}>
-          Pages {range[0] + 1}–{range[1] + 1} of {pageCount} · sizes {loaded}/{pageCount} · cached{" "}
-          {cacheRef.current.size} · last render {lastMs ?? "–"} ms
+          sizes {loaded}/{pageCount} · cached {cacheRef.current.size} · last render{" "}
+          {lastMs ?? "–"} ms
         </span>
       </div>
-      <div
-        ref={scrollRef}
-        onScroll={update}
-        style={{ height: "calc(100vh - 110px)", overflow: "auto", background: "#222" }}
-      >
+      <div style={{ display: "flex", gap: 8 }}>
+        {showThumbs && (
+          <Thumbnails
+            docId={docId}
+            pageCount={pageCount}
+            firstPageSize={firstPageSize}
+            current={current}
+            onSelect={goTo}
+            mainBusyRef={busyRef}
+          />
+        )}
         <div
+          ref={scrollRef}
+          onScroll={update}
+          tabIndex={0}
+          onKeyDown={onKey}
           style={{
-            position: "relative",
-            height: layout.total,
-            width: layout.maxWidth,
-            margin: "0 auto",
+            flex: 1,
+            minWidth: 0,
+            height: "calc(100vh - 110px)",
+            overflow: "auto",
+            background: "#222",
+            outline: "none",
           }}
         >
-          {sizes.map(([w, h], i) => {
-            const visible = i >= range[0] && i <= range[1];
-            const nearby = i >= range[0] - 1 && i <= range[1] + 1;
-            const entry = nearby ? cacheRef.current.get(i) : undefined;
-            return (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  top: layout.tops[i],
-                  left: (layout.maxWidth - w * scale) / 2,
-                  width: w * scale,
-                  height: h * scale,
-                  background: visible ? "#fff" : "#8a8a8a",
-                  color: "#000",
-                  overflow: "hidden",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 14,
-                }}
-              >
-                {entry ? (
-                  <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
-                ) : (
-                  <>Page {i + 1}</>
-                )}
-              </div>
-            );
-          })}
+          <div
+            style={{
+              position: "relative",
+              height: layout.total,
+              width: layout.maxWidth,
+              margin: "0 auto",
+            }}
+          >
+            {sizes.map(([w, h], i) => {
+              const visible = i >= range[0] && i <= range[1];
+              const nearby = i >= range[0] - 1 && i <= range[1] + 1;
+              const entry = nearby ? cacheRef.current.get(i) : undefined;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    position: "absolute",
+                    top: layout.tops[i],
+                    left: (layout.maxWidth - w * scale) / 2,
+                    width: w * scale,
+                    height: h * scale,
+                    background: visible ? "#fff" : "#8a8a8a",
+                    color: "#000",
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 14,
+                  }}
+                >
+                  {entry ? (
+                    <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
+                  ) : (
+                    <>Page {i + 1}</>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
