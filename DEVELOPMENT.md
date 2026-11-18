@@ -9,6 +9,8 @@
 - humbnail sidebar (40-bitmap cache, loads only while the main view is idle)
 - text search across the whole document (chunked, cancellable, Bangla confirmed on one PDF), result list, previous/next hit page
 - search highlights drawn from PDFium match rectangles; verified on several PDFs
+- selectable text layer (transparent text placed over rendered glyphs) with copy, Bangla copy confirmed on one PDF
+- shell pass 1: fixed app frame (title bar + workspace), design tokens in styles.css, compact controls
 
 
 
@@ -37,7 +39,8 @@
 - Test with text-only and slide PDFs; recycle visibility is unconfirmed; memory baseline right after open is ~120 MB peak
 - thumbnails assume all pages match page 1’s shape
 - highlight rects assume unrotated pages with no crop offset
-- toolbar cramped, window scrolls so Open PDF hides, replace with real shell
+- toolbar cramped, window scrolls so Open PDF hides, replace with real shell 
+- copy order follows the PDF’s own text order, so multi-column pages may copy out of order
 
 ## Next
 - thumbnails, text selection, search, bookmarks, tabs/ribbon shell

@@ -2,9 +2,14 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import ContinuousView from "./ContinuousView";
-import "./App.css";
+import "./styles.css";
 
-type OpenDoc = { id: number; pageCount: number; firstPageSize: [number, number]; path: string };
+type OpenDoc = {
+  id: number;
+  pageCount: number;
+  firstPageSize: [number, number];
+  path: string;
+};
 
 function App() {
   const [doc, setDoc] = useState<OpenDoc | null>(null);
@@ -17,7 +22,11 @@ function App() {
     });
     if (typeof picked !== "string") return;
     try {
-      const opened = await invoke<{ id: number; pageCount: number; firstPageSize: [number, number] }>("open_pdf", { path: picked })
+      const opened = await invoke<{
+        id: number;
+        pageCount: number;
+        firstPageSize: [number, number];
+      }>("open_pdf", { path: picked });
       if (doc) await invoke("close_pdf", { id: doc.id });
       setDoc({ ...opened, path: picked });
       setError(null);
@@ -27,19 +36,32 @@ function App() {
   }
 
   return (
-    <main style={{ padding: 16 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-        <h1 style={{ fontSize: 18, margin: 0 }}>B.Read</h1>
-          <button onClick={openPdf}>Open PDF…</button>
-        {doc && <span style={{ opacity: 0.6 }}>{doc.path}</span>}
-      </div>
-      {error && <p style={{ color: "red" }}>Could not open: {error}</p>}
-      {doc ? (
-        <ContinuousView key={doc.id} docId={doc.id} pageCount={doc.pageCount} firstPageSize={doc.firstPageSize} />
-      ) : (
-        <p>Open a PDF to start.</p>
-      )}
-    </main>
+    <div className="app">
+      <header className="titlebar">
+        <span className="name">B.Read</span>
+        <button onClick={openPdf}>Open PDF…</button>
+        {doc && (
+          <span className="path" title={doc.path}>
+            {doc.path}
+          </span>
+        )}
+      </header>
+      <main className="workspace">
+        {error && (
+          <p style={{ color: "var(--danger)", margin: "0 0 8px" }}>Could not open: {error}</p>
+        )}
+        {doc ? (
+          <ContinuousView
+            key={doc.id}
+            docId={doc.id}
+            pageCount={doc.pageCount}
+            firstPageSize={doc.firstPageSize}
+          />
+        ) : (
+          <p className="empty">Open a PDF to start.</p>
+        )}
+      </main>
+    </div>
   );
 }
 

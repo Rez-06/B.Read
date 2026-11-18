@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import Thumbnails from "./Thumbnails";
 import SearchBar from "./SearchBar";
 import MatchOverlay from "./MatchOverlay";
-
+import TextLayer from "./TextLayer";
 const GAP = 12; // px between pages
 const BASE = 96 / 72; // PDF points -> CSS px at 100% zoom
 const CHUNK = 8; // pages whose sizes are fetched per request
@@ -351,7 +351,7 @@ export default function ContinuousView({
           {lastMs ?? "–"} ms
         </span>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flex: 1, minHeight: 0 }}>
         {showThumbs && (
           <Thumbnails
             docId={docId}
@@ -370,7 +370,7 @@ export default function ContinuousView({
           style={{
             flex: 1,
             minWidth: 0,
-            height: "calc(100vh - 110px)",
+            height: "100%",
             overflow: "auto",
             background: "#222",
             outline: "none",
@@ -406,6 +406,7 @@ export default function ContinuousView({
                     fontSize: 14,
                   }}
                 >                   {query && nearby && <MatchOverlay docId={docId} query={query} page={i} scale={scale} />}
+                                    {nearby && <TextLayer docId={docId} page={i} scale={scale} />}
                   {entry ? (
                     <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
                   ) : (

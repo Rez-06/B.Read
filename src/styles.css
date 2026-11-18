@@ -1,0 +1,129 @@
+:root {
+  color-scheme: dark;
+
+  /* Design tokens: the single source for colours, spacing and type. */
+  --font-ui: "Segoe UI", system-ui, sans-serif;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --radius: 4px;
+  --bg-app: #1e1e1e;
+  --bg-panel: #252526;
+  --bg-control: #333337;
+  --bg-control-hover: #404046;
+  --border: #3c3c3c;
+  --text: #d4d4d4;
+  --text-dim: #8d8d8d;
+  --accent: #34507a;
+  --danger: #f87171;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--bg-app);
+  color: var(--text);
+  font: var(--fs-md) / 1.4 var(--font-ui);
+}
+
+/* App frame */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px var(--space-3);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.titlebar .name {
+  font-weight: 600;
+}
+
+.titlebar .path {
+  color: var(--text-dim);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+/* The document viewer's root fills the workspace; its first child is the toolbar. */
+.workspace > div {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace > div > div:first-child {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.empty {
+  margin: auto;
+  color: var(--text-dim);
+}
+
+/* Controls */
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-control);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 10px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--bg-control-hover);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+input {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+span {
+  white-space: nowrap;
+}

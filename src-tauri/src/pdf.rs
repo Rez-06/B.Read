@@ -204,6 +204,53 @@ pub fn page_matches(
     Ok(rects)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextSegment {
+    text: String,
+    /// Rectangle in PDF points, measured from the page's top-left corner.
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+/// All text segments on one page, for the selectable text layer.
+#[tauri::command]
+pub fn page_text(
+    id: u32,
+    page_index: u32,
+    registry: State<'_, DocRegistry>,
+) -> Result<Vec<TextSegment>, String> {
+    let mut docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get_mut(&id).ok_or("document is not open")?;
+    let out = {
+        let pages = entry.document.pages();
+        let page = pages.get(page_index as _).map_err(|e| e.to_string())?;
+        let page_height = page.height().value;
+        let text = page.text().map_err(|e| e.to_string())?;
+        let segments = text.segments();
+        let mut out: Vec<TextSegment> = Vec::new();
+        for segment in segments.iter() {
+            let s = segment.text();
+            if s.trim().is_empty() {
+                continue;
+            }
+            let b = segment.bounds();
+            out.push(TextSegment {
+                text: s,
+                left: b.left().value,
+                top: page_height - b.top().value,
+                width: b.width().value,
+                height: b.height().value,
+            });
+        }
+        out
+    };
+    touch(entry, 1)?;
+    Ok(out)
+}
+
 #[tauri::command]
 pub fn render_page(
     id: u32,

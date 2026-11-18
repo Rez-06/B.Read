@@ -156,7 +156,7 @@ export default function Thumbnails({
       style={{
         width: THUMB_W + PAD * 2 + 12,
         flexShrink: 0,
-        height: "calc(100vh - 110px)",
+        height: "100%",
         overflowY: "auto",
         background: "#1b1b1b",
       }}
