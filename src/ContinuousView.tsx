@@ -36,10 +36,16 @@ export default function ContinuousView({
   docId,
   pageCount,
   firstPageSize,
+    initialPage,
+  initialZoom,
+  onViewState,
 }: {
   docId: number;
   pageCount: number;
   firstPageSize: Size;
+    initialPage: number;
+  initialZoom: number;
+  onViewState: (page: number, zoom: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<[number, number]>([0, 0]);
@@ -48,11 +54,11 @@ export default function ContinuousView({
   );
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(0);
-  const [zoom, setZoom] = useState(1);
-  const [current, setCurrent] = useState(0);
+  const [zoom, setZoom] = useState(initialZoom);
+  const [current, setCurrent] = useState(initialPage);
   const [showThumbs, setShowThumbs] = useState(true);
   const [pageText, setPageText] = useState("1");
-  const zoomRef = useRef(1);
+  const zoomRef = useRef(initialZoom);
   const scale = zoom * BASE; // PDF points -> CSS px
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -273,6 +279,20 @@ export default function ContinuousView({
     zoomTo((el.clientWidth - 2 * GAP) / (widest * BASE));
   }, [zoomTo]);
 
+    // Restore the saved page when this tab is shown again.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && initialPage > 0) {
+      el.scrollTop = layout.tops[Math.min(initialPage, pageCount - 1)] - GAP;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Report page and zoom so the tab can be restored later.
+  useEffect(() => {
+    onViewState(current, zoom);
+  }, [current, zoom, onViewState]);
+  
   const goTo = useCallback(
     (index: number) => {
       const el = scrollRef.current;

@@ -127,3 +127,47 @@ input:focus-visible {
 span {
   white-space: nowrap;
 }
+/* Tab bar */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px var(--space-3) 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 220px;
+  padding: 4px 6px 4px 10px;
+  background: var(--bg-control);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--bg-app);
+  color: var(--text);
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  padding: 0 5px;
+  line-height: 1.2;
+  background: transparent;
+  border: none;
+}
+
+.tab-close:hover {
+  background: var(--bg-control-hover);
+}
