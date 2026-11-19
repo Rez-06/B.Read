@@ -171,3 +171,17 @@ span {
 .tab-close:hover {
   background: var(--bg-control-hover);
 }
+
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-control);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+/* Selected text in the invisible text layer: no colour of its own, so the real glyphs show through. */
+[data-textlayer]::selection {
+  color: transparent;
+    background: transparent;
+}

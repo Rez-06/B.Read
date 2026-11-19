@@ -68,6 +68,7 @@ export default function TextLayer({
           ref={(el) => {
             refs.current[i] = el;
           }}
+          data-textlayer="1"
           style={{
             position: "absolute",
             left: s.left * scale,

@@ -1,46 +1,48 @@
 # B.Read (Better Read) - DEVELOPMENT
 
-## Status
-- M0 done: Tauri 2 + React + TS scaffold runs (`bun tauri dev`).
-- M1 done: documents stay open in a DocRegistry keyed by id
-- M3 core works: continuous scroll, lazy sizes, visible-page rendering, 12-page bitmap cache
-- Automatic document recycling after 60 page touches caps PDFium memory at about 100–120 MB (was ~580 MB) on the 101 MB / 362-page test PDF.
-- continuous scroll, lazy sizes, zoom (25–400%, fit width, Ctrl+wheel), recycling
-- humbnail sidebar (40-bitmap cache, loads only while the main view is idle)
-- text search across the whole document (chunked, cancellable, Bangla confirmed on one PDF), result list, previous/next hit page
-- search highlights drawn from PDFium match rectangles; verified on several PDFs
-- selectable text layer (transparent text placed over rendered glyphs) with copy, Bangla copy confirmed on one PDF
-- shell pass 1: fixed app frame (title bar + workspace), design tokens in styles.css, compact controls
+Unified desktop office app. PDF-first MVP; DOCX/PPTX later (read-only first).
+Stack: Tauri 2 + Rust, React + TypeScript, pdfium-render 0.9.5 (PDFium DLL in src-tauri/pdfium/), SQLite (rusqlite, bundled).
 
+## Status (what works, verified by hand)
+- PDF viewer: continuous scroll, virtualized pages, 12-page bitmap cache, zoom 25-400% (fit width, Ctrl+wheel, Ctrl +/-/0), page box, keyboard nav.
+- Page sizes load lazily in the background (reading all up front took 6-8 s on a 362-page PDF).
+- Thumbnail sidebar (40-bitmap cache; renders only while the main view is idle).
+- Text search across the whole document (chunked, cancellable, Bangla confirmed), result list, prev/next hit page, yellow highlights on pages.
+- Selectable text layer (transparent text over glyphs); copy works incl. Bangla.
+- Tabs for multiple documents; only the active viewer is mounted; page+zoom restored per tab.
+- Read & Subtext v1: right panel with Transcript/Notes, manual entries with page + optional time, click to jump, current-page highlight; stored in %APPDATA%\com.lenovo.bread\bread.db, keyed by SHA-256 of the file contents (old path-keyed entries are adopted on first open).
+- Shell pass 1: fixed frame (title bar + workspace), design tokens in src/styles.css.
+- selection drawn as even line bands from the same rectangles as highlights; partial-word ends are estimated
 
+## Architecture
+- Rust: src-tauri/src/pdf.rs (PDFium bound once in a OnceLock; DocRegistry = id -> open document; touch() recycles a document after 60 page touches), subtext.rs (SQLite + file fingerprint), lib.rs (setup + commands).
+- Frontend: App.tsx (tabs), ContinuousView.tsx (main viewer), Thumbnails.tsx, SearchBar.tsx, MatchOverlay.tsx, TextLayer.tsx, SubtextPanel.tsx.
+- Page pixels: Rust returns [w u32 LE][h u32 LE][RGBA] over invoke(); drawn via ImageBitmap on canvas.
 
-## Decisions
-- PDF-first MVP; DOCX/PPTX read-only later.
-- PDFium on one dedicated worker thread; page bitmaps go to the UI via a custom protocol, not base64 IPC.
-- Original files are never modified; edits live in an overlay layer.
-- Open performance: page sizes load lazily in the background (about 16 ms per first-touched page; reading all sizes up front took 6–8 s on a 362-page PDF).
-- PDFium retains ~1.6 MB per touched page until the document is dropped; touch() in pdf.rs reopens the file after RECYCLE_AFTER touches. Threshold measured on one image-heavy PDF only
-- render width capped at 1800 px
+## Decisions and measured findings
+- Rust render ~7-19 ms/page; invoke() and custom protocol both ~60-100 ms per 4 MB page (about 17 ms per MB transferred). PNG/JPEG compression did not beat raw. Kept raw RGBA over invoke().
+- PDFium retains ~1.6 MB per touched page until the document is dropped. Fix: reopen the file after RECYCLE_AFTER = 60 touches (measured on one image-heavy 101 MB PDF only; tune with others). Result: ~25-120 MB instead of ~580 MB.
+- [profile.dev.package."*"] opt-level = 3 so dependency timings in dev are meaningful.
+- Render width capped at 1800 px.
+- Originals are never modified.
 
-## Layout
-- src-tauri/src/pdf_spike.rs: temporary spike, delete after M3 starts.
-- src-tauri/pdfium/: pdfium.dll + test.pdf (not committed).
+## Known issues / limits
+- Highlight and text-layer rectangles assume unrotated pages with no crop offset (checked on several PDFs, not on rotated/cropped ones).
+- Copy order follows the PDF's text order (multi-column pages may copy out of order).
+- Thumbnails assume every page has page 1's shape.
+- Fingerprint changes if the file's bytes change (re-saved PDFs look like new documents).
+- Subtext entries can't be edited yet, only added/deleted.
+- Debug build only measured so far; no installer build tested.
+- Toolbar is an interim design; real ribbon not built.
+- selection ends inside a word can be off by about a letter; Bangla copy gives the PDF’s own text, so a PDF with bad embedded text copies badly in every reader
+## Not built yet
+Edit/overlay mode, annotations, saving, bookmarks/outline, DOCX/PPTX, ribbon, light theme, settings, shortcuts help.
 
 ## Commands
-- Run: `bun tauri dev` (from project root)
-- Check Rust only: `cargo check` (from src-tauri)
-
-## Known issues
-- render commands run synchronously and may block the UI on huge pages
-- Perf finding (debug+release, 900px page, 4 MB RGBA): Rust render ~7-19 ms; invoke() and custom protocol both ~60-100 ms per page, so IPC route is not the bottleneck. A protocol test with zero-filled buffers showed ~17 ms per MB regardless of PDFium.
-- PNG (24-55 ms encode, 100-700 KB) and JPEG q90 (160-265 ms encode) did not beat raw RGBA overall. Decision: keep raw RGBA over invoke(); solve scrolling latency with caching + prefetch (M3), not compression.
-- [profile.dev.package."*"] opt-level = 3 in Cargo.toml so dependency timings in dev builds are meaningful.
-- Open question: pdfium time per page varied 5-130 ms in one run (lock contention from overlapping requests?). Re-measure under controlled conditions.
-- Test with text-only and slide PDFs; recycle visibility is unconfirmed; memory baseline right after open is ~120 MB peak
-- thumbnails assume all pages match page 1’s shape
-- highlight rects assume unrotated pages with no crop offset
-- toolbar cramped, window scrolls so Open PDF hides, replace with real shell 
-- copy order follows the PDF’s own text order, so multi-column pages may copy out of order
+- Run: `bun tauri dev` (project root). Release-mode dev: `bun tauri dev --release`.
+- Check Rust only: `cargo check` (from src-tauri).
+- PDFium: put pdfium.dll in src-tauri/pdfium/ (from bblanchon/pdfium-binaries, pdfium-win-x64).
+- Database path is printed at startup on a [db] line.
 
 ## Next
-- thumbnails, text selection, search, bookmarks, tabs/ribbon shell
+Filter box in Subtext panel, entry editing, then PDF annotations or the ribbon shell.

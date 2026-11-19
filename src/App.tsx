@@ -9,6 +9,8 @@ type Tab = {
   pageCount: number;
   firstPageSize: [number, number];
   path: string;
+  /** Content fingerprint; null until it has been computed in the background. */
+  docKey: string | null;
 };
 type ViewState = { page: number; zoom: number };
 
@@ -36,11 +38,22 @@ function App() {
           pageCount: number;
           firstPageSize: [number, number];
         }>("open_pdf", { path });
-        const tab: Tab = { ...opened, path };
+        const tab: Tab = { ...opened, path, docKey: null };
         tabsRef.current = [...tabsRef.current, tab];
         setTabs(tabsRef.current);
         setActiveId(tab.id);
         setError(null);
+
+        // Identify the document by its contents in the background.
+        invoke<string>("file_fingerprint", { path })
+          .then(async (fingerprint) => {
+            await invoke("subtext_adopt", { path, fingerprint });
+            tabsRef.current = tabsRef.current.map((t) =>
+              t.id === tab.id ? { ...t, docKey: fingerprint } : t,
+            );
+            setTabs(tabsRef.current);
+          })
+          .catch((e) => setError(`${baseName(path)}: could not identify file (${e})`));
       } catch (e) {
         setError(`${baseName(path)}: ${e}`);
       }
@@ -121,6 +134,7 @@ function App() {
             docId={active.id}
             pageCount={active.pageCount}
             firstPageSize={active.firstPageSize}
+            docKey={active.docKey}
             initialPage={saved?.page ?? 0}
             initialZoom={saved?.zoom ?? 1}
             onViewState={(page, zoom) => viewStates.current.set(active.id, { page, zoom })}
