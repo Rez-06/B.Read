@@ -5,8 +5,10 @@ import SearchBar from "./SearchBar";
 import MatchOverlay from "./MatchOverlay";
 import TextLayer from "./TextLayer";
 import SubtextPanel from "./SubtextPanel";
-import { COLORS, HighlightOverlay, useHighlights } from "./Highlights";
+import { HighlightOverlay, useHighlights } from "./Highlights";
+import Toolbar from "./Toolbar";
 import { SelectionBand, useSelectionBands } from "./SelectionBands";
+
 const GAP = 12; // px between pages
 const BASE = 96 / 72; // PDF points -> CSS px at 100% zoom
 const CHUNK = 8; // pages whose sizes are fetched per request
@@ -39,16 +41,16 @@ export default function ContinuousView({
   docId,
   pageCount,
   firstPageSize,
-    initialPage,
-    docKey,
+  docKey,
+  initialPage,
   initialZoom,
   onViewState,
 }: {
   docId: number;
   pageCount: number;
   firstPageSize: Size;
-  initialPage: number;
   docKey: string | null;
+  initialPage: number;
   initialZoom: number;
   onViewState: (page: number, zoom: number) => void;
 }) {
@@ -57,21 +59,21 @@ export default function ContinuousView({
   const [sizes, setSizes] = useState<Size[]>(() =>
     Array.from({ length: pageCount }, () => firstPageSize),
   );
-  const [query, setQuery] = useState("");
-  const [showSubtext, setShowSubtext] = useState(false);
   const [loaded, setLoaded] = useState(0);
   const [zoom, setZoom] = useState(initialZoom);
   const [current, setCurrent] = useState(initialPage);
   const [showThumbs, setShowThumbs] = useState(true);
   const [pageText, setPageText] = useState("1");
-    const [hlColor, setHlColor] = useState("yellow");
+  const [query, setQuery] = useState("");
+  const [showSubtext, setShowSubtext] = useState(false);
+  const [hlColor, setHlColor] = useState("yellow");
   const [hlMessage, setHlMessage] = useState<string | null>(null);
   const zoomRef = useRef(initialZoom);
   const scale = zoom * BASE; // PDF points -> CSS px
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
-    const hl = useHighlights(docKey, scale);
-      const selBands = useSelectionBands(scale);
+  const hl = useHighlights(docKey, scale);
+  const selBands = useSelectionBands(scale);
   const runHighlight = async (action: () => Promise<string | null>) => {
     const msg = await action();
     setHlMessage(msg);
@@ -294,7 +296,7 @@ export default function ContinuousView({
     zoomTo((el.clientWidth - 2 * GAP) / (widest * BASE));
   }, [zoomTo]);
 
-    // Restore the saved page when this tab is shown again.
+  // Restore the saved page when this tab is shown again.
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (el && initialPage > 0) {
@@ -307,7 +309,7 @@ export default function ContinuousView({
   useEffect(() => {
     onViewState(current, zoom);
   }, [current, zoom, onViewState]);
-  
+
   const goTo = useCallback(
     (index: number) => {
       const el = scrollRef.current;
@@ -355,66 +357,42 @@ export default function ContinuousView({
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        <button onClick={() => setShowThumbs((s) => !s)}>
-          {showThumbs ? "Hide thumbnails" : "Thumbnails"}
-        </button>
-        <input
-          type="number"
-          min={1}
-          max={pageCount}
-          value={pageText}
-          onChange={(e) => setPageText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              const n = parseInt(pageText, 10);
-              if (!Number.isNaN(n)) goTo(n - 1);
-              scrollRef.current?.focus();
-            }
-          }}
-          style={{ width: 64 }}
-        />
-        <span>/ {pageCount}</span>
-                <SearchBar docId={docId} pageCount={pageCount} current={current} onGoTo={goTo} onQuery={setQuery} />
-                        <select
-          value={hlColor}
-          onChange={(e) => setHlColor(e.target.value)}
-          title="Highlight colour"
-        >
-          {Object.keys(COLORS).map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <button
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => runHighlight(() => hl.add(hlColor))}
-        >
-          Highlight
-        </button>
-        <button
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => runHighlight(() => hl.remove())}
-        >
-          Unhighlight
-        </button>
-        {hlMessage && <span style={{ color: "var(--danger)" }}>{hlMessage}</span>}
-                        <button onClick={() => setShowSubtext((s) => !s)}>
-          {showSubtext ? "Hide subtext" : "Subtext"}
-        </button>
-        <button onClick={() => zoomTo(zoomRef.current / 1.25)}>−</button>
-        <span style={{ minWidth: 48, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
-        <button onClick={() => zoomTo(zoomRef.current * 1.25)}>+</button>
-        <button onClick={() => zoomTo(1)}>100%</button>
-        <button onClick={fitWidth}>Fit width</button>
-        <span style={{ opacity: 0.8 }}>
-          sizes {loaded}/{pageCount} · cached {cacheRef.current.size} · last render{" "}
-          {lastMs ?? "–"} ms
-        </span>
-      </div>
-            <div style={{ display: "flex", gap: 8, flex: 1, minHeight: 0 }}>
-                {showSubtext && (
+      <Toolbar
+        showThumbs={showThumbs}
+        onToggleThumbs={() => setShowThumbs((s) => !s)}
+        pageText={pageText}
+        onPageText={setPageText}
+        onPageEnter={() => {
+          const n = parseInt(pageText, 10);
+          if (!Number.isNaN(n)) goTo(n - 1);
+          scrollRef.current?.focus();
+        }}
+        pageCount={pageCount}
+        search={
+          <SearchBar
+            docId={docId}
+            pageCount={pageCount}
+            current={current}
+            onGoTo={goTo}
+            onQuery={setQuery}
+          />
+        }
+        hlColor={hlColor}
+        onHlColor={setHlColor}
+        onHighlight={() => runHighlight(() => hl.add(hlColor))}
+        onUnhighlight={() => runHighlight(() => hl.remove())}
+        hlMessage={hlMessage}
+        showSubtext={showSubtext}
+        onToggleSubtext={() => setShowSubtext((s) => !s)}
+        zoom={zoom}
+        onZoomOut={() => zoomTo(zoomRef.current / 1.25)}
+        onZoomIn={() => zoomTo(zoomRef.current * 1.25)}
+        onZoomReset={() => zoomTo(1)}
+        onFitWidth={fitWidth}
+        status={`sizes ${loaded}/${pageCount} · cached ${cacheRef.current.size} · last render ${lastMs ?? "–"} ms`}
+      />
+      <div style={{ display: "flex", gap: 8, flex: 1, minHeight: 0 }}>
+        {showSubtext && (
           <SubtextPanel docKey={docKey} current={current} pageCount={pageCount} onGoTo={goTo} />
         )}
         {showThumbs && (
@@ -431,7 +409,7 @@ export default function ContinuousView({
           ref={scrollRef}
           onScroll={update}
           tabIndex={0}
-                    onKeyDown={onKey}
+          onKeyDown={onKey}
           onMouseDown={(e) => {
             if (!(e.target as HTMLElement).closest("[data-textlayer]")) {
               window.getSelection()?.removeAllRanges();
@@ -476,20 +454,30 @@ export default function ContinuousView({
                     justifyContent: "center",
                     fontSize: 14,
                   }}
-                >                   {query && nearby && <MatchOverlay docId={docId} query={query} page={i} scale={scale} />}
-                                    {nearby && <TextLayer docId={docId} page={i} scale={scale} />}
-                                    {nearby &&
-                    hl.byPage
-                      .get(i)
-                      ?.map((h) => (
-                        <HighlightOverlay key={h.id} rects={h.rects} color={h.color} scale={scale} />
-                      ))}
-                                        {nearby && selBands.get(i) && <SelectionBand rects={selBands.get(i)!} scale={scale} />}
+                >
                   {entry ? (
                     <PageBitmap bitmap={entry.bitmap} width={w * scale} height={h * scale} />
                   ) : (
                     <>Page {i + 1}</>
                   )}
+                  {nearby &&
+                    hl.byPage
+                      .get(i)
+                      ?.map((h2) => (
+                        <HighlightOverlay
+                          key={h2.id}
+                          rects={h2.rects}
+                          color={h2.color}
+                          scale={scale}
+                        />
+                      ))}
+                  {query && nearby && (
+                    <MatchOverlay docId={docId} query={query} page={i} scale={scale} />
+                  )}
+                  {nearby && selBands.get(i) && (
+                    <SelectionBand rects={selBands.get(i)!} scale={scale} />
+                  )}
+                  {nearby && <TextLayer docId={docId} page={i} scale={scale} />}
                 </div>
               );
             })}

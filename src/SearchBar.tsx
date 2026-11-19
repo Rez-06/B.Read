@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { ChevronDown, ChevronUp, List } from "lucide-react";
+import IconButton from "./IconButton";
 
 const CHUNK = 8; // pages searched per request
+const ICON = { size: 16, strokeWidth: 1.75 };
 
 export default function SearchBar({
   docId,
   pageCount,
   current,
-  onQuery,
   onGoTo,
+  onQuery,
 }: {
   docId: number;
   pageCount: number;
   current: number;
-  onQuery: (q: string) => void;
   onGoTo: (index: number) => void;
+  onQuery: (q: string) => void;
 }) {
   const [text, setText] = useState("");
   const [hits, setHits] = useState<[number, number][]>([]); // [page index, match count]
@@ -78,6 +81,11 @@ export default function SearchBar({
   }
 
   const totalMatches = hits.reduce((sum, h) => sum + h[1], 0);
+  const status = searching
+    ? `Searching ${scanned}/${pageCount}…`
+    : searched
+      ? `${totalMatches} matches on ${hits.length} pages`
+      : "";
 
   return (
     <div style={{ position: "relative", display: "flex", gap: 6, alignItems: "center" }}>
@@ -92,19 +100,21 @@ export default function SearchBar({
         }}
         style={{ width: 160 }}
       />
-      <button onClick={() => step(-1)} disabled={hits.length === 0} title="Previous result page">
-        ◀
-      </button>
-      <button onClick={() => step(1)} disabled={hits.length === 0} title="Next result page">
-        ▶
-      </button>
-      <button onClick={() => setOpen((o) => !o)} disabled={!searching && !searched}>
-        {searching
-          ? `Searching ${scanned}/${pageCount}…`
-          : searched
-            ? `${totalMatches} matches on ${hits.length} pages`
-            : "Results"}
-      </button>
+      <IconButton label="Previous result page" disabled={hits.length === 0} onClick={() => step(-1)}>
+        <ChevronUp {...ICON} />
+      </IconButton>
+      <IconButton label="Next result page" disabled={hits.length === 0} onClick={() => step(1)}>
+        <ChevronDown {...ICON} />
+      </IconButton>
+      <IconButton
+        label="Result list"
+        active={open}
+        disabled={!searching && !searched}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <List {...ICON} />
+      </IconButton>
+      {status && <span style={{ color: "var(--text-dim)" }}>{status}</span>}
       {open && (searching || searched) && (
         <div
           style={{
