@@ -28,6 +28,7 @@ pub fn run() {
             pdf::search_pages,
             pdf::page_matches,
             pdf::page_text,
+            pdf::document_outline,
             subtext::subtext_list,
             subtext::subtext_add,
             subtext::subtext_delete,

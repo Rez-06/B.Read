@@ -286,3 +286,45 @@ pub fn render(
     touch(entry, 1)?;
     Ok(out)
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutlineItem {
+    title: String,
+    /// 0-based page index, if the bookmark points at a page
+    page: Option<u32>,
+    depth: u32,
+}
+
+fn walk_outline(node: Option<PdfBookmark<'_>>, depth: u32, out: &mut Vec<OutlineItem>) {
+    let mut node = node;
+    while let Some(bookmark) = node {
+        // Hard cap so a malformed or looping outline can't run forever.
+        if out.len() >= 5000 {
+            return;
+        }
+        let title = bookmark.title().unwrap_or_default();
+        let page = bookmark
+            .destination()
+            .and_then(|d| d.page_index().ok())
+            .map(|p| p as u32);
+        out.push(OutlineItem { title, page, depth });
+        if depth < 12 {
+            walk_outline(bookmark.first_child(), depth + 1, out);
+        }
+        node = bookmark.next_sibling();
+    }
+}
+
+/// The document's bookmark tree, flattened in reading order with nesting depth.
+#[tauri::command]
+pub fn document_outline(
+    id: u32,
+    registry: State<'_, DocRegistry>,
+) -> Result<Vec<OutlineItem>, String> {
+    let docs = registry.docs.lock().map_err(|e| e.to_string())?;
+    let entry = docs.get(&id).ok_or("document is not open")?;
+    let mut out = Vec::new();
+    walk_outline(entry.document.bookmarks().root(), 0, &mut out);
+    Ok(out)
+}

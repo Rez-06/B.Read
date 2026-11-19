@@ -240,3 +240,43 @@ select {
   opacity: 1;
   transition-delay: 0.5s; /* hover delay; hides instantly when the mouse leaves */
 }
+
+/* Highlight colour picker */
+.color-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.palette {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.swatch-btn {
+  padding: 3px;
+  line-height: 0;
+}
+
+.swatch-btn.on {
+  outline: 2px solid var(--accent);
+}
+
+.color-picker .tip[aria-expanded="true"]::after {
+  display: none; /* no tooltip over the open palette */
+}

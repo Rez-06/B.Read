@@ -9,7 +9,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import IconButton from "./IconButton";
-import { COLORS } from "./Highlights";
+import ColorPicker from "./ColorPicker";
 
 const ICON = { size: 16, strokeWidth: 1.75 };
 
@@ -58,7 +58,7 @@ export default function Toolbar({
 }) {
   return (
     <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
-      <IconButton label="Thumbnails" active={showThumbs} onClick={onToggleThumbs}>
+      <IconButton label="Sidebar (pages and outline)" active={showThumbs} onClick={onToggleThumbs}>
         <PanelLeft {...ICON} />
       </IconButton>
       <span className="sep" />
@@ -81,16 +81,10 @@ export default function Toolbar({
       <IconButton label="Highlight selection" keepSelection onClick={onHighlight}>
         <Highlighter {...ICON} />
       </IconButton>
+      <ColorPicker value={hlColor} onChange={onHlColor} />
       <IconButton label="Remove highlight" keepSelection onClick={onUnhighlight}>
         <Eraser {...ICON} />
       </IconButton>
-      <select value={hlColor} onChange={(e) => onHlColor(e.target.value)} title="Highlight colour">
-        {Object.keys(COLORS).map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
       {hlMessage && <span style={{ color: "var(--danger)" }}>{hlMessage}</span>}
       <span className="sep" />
       <IconButton label="Subtext: transcript and notes" active={showSubtext} onClick={onToggleSubtext}>

@@ -13,6 +13,8 @@ Stack: Tauri 2 + Rust, React + TypeScript, pdfium-render 0.9.5 (PDFium DLL in sr
 - Read & Subtext v1: right panel with Transcript/Notes, manual entries with page + optional time, click to jump, current-page highlight; stored in %APPDATA%\com.lenovo.bread\bread.db, keyed by SHA-256 of the file contents (old path-keyed entries are adopted on first open).
 - Shell pass 1: fixed frame (title bar + workspace), design tokens in src/styles.css.
 - selection drawn as even line bands from the same rectangles as highlights; partial-word ends are estimated
+- icon toolbar with delayed tooltips (lucide-react)
+- highlight colour picker (swatch palette beside the marker)
 
 ## Architecture
 - Rust: src-tauri/src/pdf.rs (PDFium bound once in a OnceLock; DocRegistry = id -> open document; touch() recycles a document after 60 page touches), subtext.rs (SQLite + file fingerprint), lib.rs (setup + commands).

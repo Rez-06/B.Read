@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import Thumbnails from "./Thumbnails";
+import Sidebar from "./Sidebar";
 import SearchBar from "./SearchBar";
 import MatchOverlay from "./MatchOverlay";
 import TextLayer from "./TextLayer";
@@ -396,7 +396,7 @@ export default function ContinuousView({
           <SubtextPanel docKey={docKey} current={current} pageCount={pageCount} onGoTo={goTo} />
         )}
         {showThumbs && (
-          <Thumbnails
+          <Sidebar
             docId={docId}
             pageCount={pageCount}
             firstPageSize={firstPageSize}
