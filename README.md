@@ -2,9 +2,13 @@
 
 ### Better Read. Better Create. Better Work.
 
-\<p align="center">   \<img src="[https://img.shields.io/badge/STATUS-IN%20DEVELOPMENT-8B5CF6?style=for-the-badge](https://img.shields.io/badge/STATUS-IN%20DEVELOPMENT-8B5CF6?style=for-the-badge)" />   \<img src="[https://img.shields.io/badge/BUILT%20WITH-RUST%20%2B%20REACT-orange?style=for-the-badge](https://img.shields.io/badge/BUILT%20WITH-RUST%20%2B%20REACT-orange?style=for-the-badge)" />   \<img src="[https://img.shields.io/badge/DESKTOP-TAURI%202-24C8DB?style=for-the-badge](https://img.shields.io/badge/DESKTOP-TAURI%202-24C8DB?style=for-the-badge)" /> \</p>
+![Development](https://img.shields.io/badge/STATUS-IN_DEVELOPMENT-8B5CF6?style=for-the-badge)
+![Tech](https://img.shields.io/badge/BUILT_WITH-RUST_+_REACT-orange?style=for-the-badge)
+![Desktop](https://img.shields.io/badge/DESKTOP-TAURI_2-24C8DB?style=for-the-badge)
 
-\<p align="center">   \<b>A unified, lightweight workspace for documents, presentations, and PDFs.\</b>   \<br />   Read. Create. Edit. Annotate. Understand. \</p>
+**A unified, lightweight workspace for documents, presentations, and PDFs.**
+
+Read. Create. Edit. Annotate. Understand.
 
 ---
 
@@ -21,18 +25,8 @@ Yet working with them often means switching between multiple applications, disco
 
 A unified desktop application that brings document creation, presentation editing, and PDF reading into one coherent workspace.
 
-Open a DOCX and write.
+- Open a DOCX and write.
+- Open a PPTX and create.
+- Open a PDF and explore, annotate, study, and edit.
 
-Open a PPTX and create.
-
-Open a PDF and explore, annotate, study, and edit.
-
-Three formats. One workspace. A better way to work.
-
----
-
-\<p align="center">
-&#x20; \<b>B.Read — Better Read.\</b>
-&#x20; \<br />
-&#x20; \<sub>Built for people who work with ideas.\</sub>
-\</p>
+**Three formats. One workspace. A better way to work.**
