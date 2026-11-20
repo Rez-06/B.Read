@@ -15,6 +15,9 @@ Stack: Tauri 2 + Rust, React + TypeScript, pdfium-render 0.9.5 (PDFium DLL in sr
 - selection drawn as even line bands from the same rectangles as highlights; partial-word ends are estimated
 - icon toolbar with delayed tooltips (lucide-react)
 - highlight colour picker (swatch palette beside the marker)
+- Windows installer (NSIS, 11.4 MB) bundles pdfium.dll via bundle.resources; installed app tested with source-tree DLL absent. Debug-only source-tree fallback in lib.rs
+- Session restore (tabs, page, zoom, active tab) stored in SQLite
+- opening files from outside: second launches hand their PDF paths to the running instance via the single-instance plugin; launch arguments are picked up at startup
 
 ## Architecture
 - Rust: src-tauri/src/pdf.rs (PDFium bound once in a OnceLock; DocRegistry = id -> open document; touch() recycles a document after 60 page touches), subtext.rs (SQLite + file fingerprint), lib.rs (setup + commands).
@@ -27,6 +30,8 @@ Stack: Tauri 2 + Rust, React + TypeScript, pdfium-render 0.9.5 (PDFium DLL in sr
 - [profile.dev.package."*"] opt-level = 3 so dependency timings in dev are meaningful.
 - Render width capped at 1800 px.
 - Originals are never modified.
+-  startup under 1 s, bread.exe 3.8 MB idle / 34 MB with a 294-page PDF; webview memory not yet recorded.
+- identifier com.lenovo.bread must not change, because it decides the app data folder that holds bread.db
 
 ## Known issues / limits
 - Highlight and text-layer rectangles assume unrotated pages with no crop offset (checked on several PDFs, not on rotated/cropped ones).
@@ -37,6 +42,7 @@ Stack: Tauri 2 + Rust, React + TypeScript, pdfium-render 0.9.5 (PDFium DLL in sr
 - Debug build only measured so far; no installer build tested.
 - Toolbar is an interim design; real ribbon not built.
 - selection ends inside a word can be off by about a letter; Bangla copy gives the PDF’s own text, so a PDF with bad embedded text copies badly in every reader
+- PDFium licence file not yet shipped with the installer; verify terms before sharing
 ## Not built yet
 Edit/overlay mode, annotations, saving, bookmarks/outline, DOCX/PPTX, ribbon, light theme, settings, shortcuts help.
 

@@ -27,6 +27,7 @@ image = { version = "0.25.10", default-features = false, features = ["png"] }
 tauri-plugin-dialog = "2"
 rusqlite = { version = "0.43.0", features = ["bundled"] }
 sha2 = "0.11.1"
+tauri-plugin-single-instance = "2.5.5"
 
 # Compile dependencies (image, pdfium-render, ...) optimized even in dev builds,
 # so dev-mode timings are meaningful. Our own crate stays in fast-compile debug mode.

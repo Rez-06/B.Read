@@ -241,3 +241,39 @@ pub fn highlight_delete(id: i64, db: State<'_, SubtextDb>) -> Result<(), String>
         .map_err(|e| e.to_string())?;
     Ok(())
 }
+
+use rusqlite::OptionalExtension;
+
+fn ensure_session_table(conn: &Connection) -> Result<(), String> {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS session (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        [],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
+}
+
+/// The saved session as a JSON string, if there is one.
+#[tauri::command]
+pub fn session_load(db: State<'_, SubtextDb>) -> Result<Option<String>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    ensure_session_table(&conn)?;
+    conn.query_row("SELECT value FROM session WHERE key = 'main'", [], |r| {
+        r.get::<_, String>(0)
+    })
+    .optional()
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn session_save(value: String, db: State<'_, SubtextDb>) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    ensure_session_table(&conn)?;
+    conn.execute(
+        "INSERT INTO session (key, value) VALUES ('main', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![value],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}

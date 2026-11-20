@@ -16,8 +16,18 @@ const RECYCLE_AFTER: u32 = 60;
 /// PDFium can only be bound once per process, so it lives here, shared.
 static PDFIUM: OnceLock<Result<Pdfium, String>> = OnceLock::new();
 
+static PDFIUM_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+/// Where pdfium.dll lives. Set once at startup (see lib.rs); falls back to the source tree in dev.
+pub fn set_pdfium_dir(dir: PathBuf) {
+    let _ = PDFIUM_DIR.set(dir);
+}
+
 fn pdfium_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("pdfium")
+    PDFIUM_DIR
+        .get()
+        .cloned()
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("pdfium"))
 }
 
 fn pdfium() -> Result<&'static Pdfium, String> {
