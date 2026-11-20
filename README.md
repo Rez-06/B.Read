@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <div align="center">
 
 <img src="assets/banner.svg" alt="B.read — better read" width="100%"/>
@@ -15,58 +14,56 @@
 
 <br/>
 
-### 📖 Read better. Sync with the lecture. Keep every file safe.
+### Read better. Sync with the lecture. Keep every file safe.
 
-**[✨ Features](#-features) · [🎛️ Modes](#️-three-modes-one-workspace) · [🏗️ Architecture](#️-architecture) · [🗺️ Roadmap](#️-roadmap) · [🚀 Quick start](#-quick-start) · [🤝 Contributing](#-contributing)**
+**[Overview](#overview) · [Features](#features) · [Modes](#modes) · [Architecture](#architecture) · [Roadmap](#roadmap) · [Quick start](#quick-start) · [Contributing](#contributing)**
 
 </div>
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 👀 What is B.read?
+## Overview
 
 **B.read** (read it as *better read*) is a fast, native-feeling desktop workspace for documents.
 
-Open a PDF and it scrolls smoothly. Search it in English **and** Bangla. Highlight it. Then put it next to a lecture transcript where every line is linked to a page, so clicking a moment in the lecture **jumps straight to the page** being discussed. DOCX and PPTX files open in the same tabbed window.
-
-> *Most readers stop at "view". B.read starts there.*
+Open a PDF and it scrolls smoothly. Search it in English and Bangla. Highlight it. Then place it beside a lecture transcript where every line is linked to a page, so selecting a moment in the lecture takes you straight to the page being discussed. DOCX and PPTX files open in the same tabbed window.
 
 > [!NOTE]
-> **B.read is in early development.** This README describes what we are building and in what order. The [roadmap](#️-roadmap) is the source of truth for what actually works today.
+> B.read is in early development. This README describes what is being built and in what order. The [roadmap](#roadmap) is the source of truth for what works today.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## ✨ Features
+## Features
 
-| | Feature | What it means |
-|:-:|---|---|
-| 📄 | **PDF-first reading** | Virtualized scrolling, zoom, thumbnails and text selection, rendered by PDFium. Built so a 500-page PDF stays smooth. |
-| 🔎 | **Bangla + English search** | Full-text search across the document. Bangla is tested from the first reader milestone, not bolted on at the end. |
-| 🖍️ | **Annotations that can't eat your file** | Highlights and notes are saved with a safe-save pipeline: write to a temp file, verify, atomically replace, keep a backup. |
-| 🎧 | **Read & Subtext** | Manual transcripts with page links and notes. Click a transcript entry and the page jumps. |
-| 🧩 | **Edit / Overlay** | Move, resize and rotate objects on top of a PDF. The original stays untouched until you flatten to a new file. |
-| 🗂️ | **Tabs for everything** | One window, one tab per document, a ribbon that changes with the document type. |
-| 📑 | **DOCX / PPTX viewing** | Open and view typical Office files in the same workspace, with an honest fidelity disclaimer. |
-| 🎞️ | **PDF → PPTX export** | Each page becomes a slide background with your overlay shapes on top. |
-| 🪶 | **Light on memory** | Uses the system WebView instead of bundling a browser, and keeps rendered pages in bounded LRU caches. |
+| Feature | What it means |
+|---|---|
+| **PDF-first reading** | Virtualized scrolling, zoom, thumbnails and text selection, rendered by PDFium. Designed so a 500-page PDF stays smooth. |
+| **Bangla and English search** | Full-text search across the document. Bangla is tested from the first reader milestone, not added at the end. |
+| **Safe annotations** | Highlights and notes are saved through a safe-save pipeline: write to a temp file, verify, atomically replace, keep a backup. |
+| **Read & Subtext** | Manual transcripts with page links and notes. Select a transcript entry and the page jumps. |
+| **Edit / Overlay** | Move, resize and rotate objects on top of a PDF. The original stays untouched until you flatten to a new file. |
+| **Tabbed workspace** | One window, one tab per document, and a ribbon that changes with the document type. |
+| **DOCX and PPTX viewing** | Open typical Office files in the same workspace, with a clear fidelity disclaimer. |
+| **PDF to PPTX export** | Each page becomes a slide background with your overlay shapes on top. |
+| **Low memory footprint** | Uses the system WebView instead of bundling a browser, and keeps rendered pages in bounded LRU caches. |
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🎛️ Three modes, one workspace
+## Modes
 
 | Mode | For | You get |
 |---|---|---|
-| 📖 **Read** | Just reading, quickly | Smooth scroll, zoom, thumbnails, search, text selection, highlights |
-| 🎧 **Read & Subtext** | Studying with a lecture | Transcript panel, page-linked entries, notes, click-to-jump |
-| 🛠️ **Edit / Overlay** | Marking up and building on a PDF | Text boxes, shapes and images as movable overlay objects, with undo and flatten-to-PDF export |
+| **Read** | Reading quickly | Smooth scroll, zoom, thumbnails, search, text selection, highlights |
+| **Read & Subtext** | Studying with a lecture | Transcript panel, page-linked entries, notes, click-to-jump |
+| **Edit / Overlay** | Marking up and building on a PDF | Text boxes, shapes and images as movable overlay objects, with undo and flatten-to-PDF export |
 
-The ribbon is **data-driven**: each document type declares its tabs and commands, and a command only lights up when a real handler exists. No fake buttons.
+The ribbon is data-driven: each document type declares its tabs and commands, and a command is enabled only when a real handler exists.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🏗️ Architecture
+## Architecture
 
-One rule splits the whole system:
+One rule splits the system:
 
 > **Rust owns the heavy, stateful work. React owns pixels and interaction.**
 
@@ -108,54 +105,54 @@ flowchart LR
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🧰 Tech stack
+## Tech stack
 
 | Layer | Choice | Why |
 |---|---|---|
-| Shell | **Tauri 2** | System WebView2 on Windows, so idle memory stays well below an Electron app |
+| Shell | **Tauri 2** | Uses the system WebView2 on Windows, so idle memory stays well below an Electron app |
 | Backend | **Rust** | Registry, engines, schedulers, caches, safe save |
 | Frontend | **React + TypeScript** | Shell, workspaces, command registry |
-| Tooling | **Bun** + Tailwind | Fast installs and builds |
+| Tooling | **Bun**, Tailwind | Fast installs and builds |
 | PDF | **PDFium** via `pdfium-render` | Rendering, text extraction and search |
-| Office files | `office_oxide` *(candidate)*, `zip` + `quick-xml` | Parsing and metadata, behind a thin abstraction so it can be swapped |
+| Office files | `office_oxide` (candidate), `zip` + `quick-xml` | Parsing and metadata, behind a thin abstraction so it can be swapped |
 | Storage | **SQLite** | Metadata only: recent files, settings, transcripts and notes |
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🧭 Design principles
+## Design principles
 
-1. **Never lose a user's file.** Save to a temp file, verify it, atomically replace the original, keep a backup.
+1. **Never lose a user's file.** Save to a temp file, verify it, atomically replace the original, and keep a backup.
 2. **Be honest about fidelity.** No compatibility claims without tests. DOCX and PPTX start read-only, with a visible disclaimer.
 3. **One thread for PDFium.** It is not safely multi-threaded, so it runs on a dedicated worker behind a queue.
-4. **Originals stay untouched.** Overlays live in their own model and only become part of a PDF when you flatten.
+4. **Originals stay untouched.** Overlays live in their own model and become part of a PDF only when you flatten.
 5. **Bangla from day one.** Shaping, font fallback and measurement are tested with Bangla files from the PDF reader milestone onward.
 6. **No dead buttons.** A command is enabled only when something real handles it.
-7. **Swap-friendly parsing.** Office parsing sits behind our own interface, because the library underneath is young.
+7. **Swappable parsing.** Office parsing sits behind our own interface, because the library underneath is young.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🗺️ Roadmap
+## Roadmap
 
-Legend: ⬜ planned · 🚧 in progress · ✅ shipped. Tick these off as you go.
+Update the status column as milestones ship.
 
-| | Milestone | Difficulty | Done when |
-|:-:|---|:-:|---|
-| ⬜ | **M0** Scaffold, `DEVELOPMENT.md`, CI build | Low | `bun tauri dev` runs on a clean machine |
-| ⬜ | **M1** PDFium spike | Medium | One PDF page renders in the window, memory measured |
-| ⬜ | **M2** Shell, tabs, design tokens, ribbon | Medium | Tabs open, PDF ribbon shows, unfinished commands are marked unavailable |
-| ⬜ | **M3** PDF Read mode | High | A 500-page PDF scrolls smoothly within a set memory cap |
-| ⬜ | **M4** Annotations + safe save | High | Saved output opens correctly in other PDF readers |
-| ⬜ | **M5** Read & Subtext | Medium | Click a transcript entry and the page jumps |
-| ⬜ | **M6** Edit / Overlay | High | Overlay objects flatten into a valid PDF |
-| ⬜ | **M7** DOCX / PPTX viewers | High | Typical files open, with a fidelity disclaimer |
-| ⬜ | **M8** PPTX export + limited Office editing | Very high | Round-trips open in PowerPoint |
+| Milestone | Difficulty | Done when | Status |
+|---|:-:|---|:-:|
+| **M0** Scaffold, `DEVELOPMENT.md`, CI build | Low | `bun tauri dev` runs on a clean machine | Planned |
+| **M1** PDFium spike | Medium | One PDF page renders in the window, memory measured | Planned |
+| **M2** Shell, tabs, design tokens, ribbon | Medium | Tabs open, PDF ribbon shows, unfinished commands are marked unavailable | Planned |
+| **M3** PDF Read mode | High | A 500-page PDF scrolls smoothly within a set memory cap | Planned |
+| **M4** Annotations and safe save | High | Saved output opens correctly in other PDF readers | Planned |
+| **M5** Read & Subtext | Medium | Selecting a transcript entry jumps to the page | Planned |
+| **M6** Edit / Overlay | High | Overlay objects flatten into a valid PDF | Planned |
+| **M7** DOCX / PPTX viewers | High | Typical files open, with a fidelity disclaimer | Planned |
+| **M8** PPTX export and limited Office editing | Very high | Round-trips open in PowerPoint | Planned |
 
 > [!IMPORTANT]
-> **MVP = a PDF-first reader.** Tabs, a fast Read mode, search, safely saved highlights, and Read & Subtext with manual transcripts. That is the part nobody else combines, so it ships first. Word-style layout (shaping, pagination, tables, complex scripts) has no mature Rust library, so DOCX and PPTX go **read-first**, with editing added in narrow slices later.
+> **The MVP is a PDF-first reader:** tabs, a fast Read mode, search, safely saved highlights, and Read & Subtext with manual transcripts. That combination is what sets B.read apart, so it ships first. No mature Rust library does Word-style layout (shaping, pagination, tables, complex scripts), so DOCX and PPTX go read-first, with editing added in narrow slices later.
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🚀 Quick start
+## Quick start
 
 **Prerequisites (Windows)**
 
@@ -174,13 +171,13 @@ bun install
 bun tauri dev
 ```
 
-A window should open. If it does not, check the prerequisites above first.
+A window should open. If it does not, check the prerequisites first.
 
 > [!TIP]
 > PDF rendering needs the PDFium binary (a DLL on Windows) bundled with the app. Setup steps will live in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) once milestone M1 lands.
 
 <details>
-<summary><b>🗂️ Project structure</b></summary>
+<summary><b>Project structure</b></summary>
 
 <br/>
 
@@ -209,13 +206,13 @@ b-read/
 
 <img src="assets/divider.svg" width="100%" alt=""/>
 
-## 🤝 Contributing
+## Contributing
 
-Ideas, bug reports and Bangla test files are all welcome. Open an issue before starting anything big so the work lines up with the roadmap.
+Ideas, bug reports and Bangla test files are welcome. Open an issue before starting anything large so the work lines up with the roadmap.
 
-## 📜 License
+## License
 
-Add your license here (for example MIT) and drop a `LICENSE` file in the repo root.
+Add your license here (for example MIT) and place a `LICENSE` file in the repository root.
 
 <br/>
 
@@ -223,40 +220,4 @@ Add your license here (for example MIT) and drop a `LICENSE` file in the repo ro
 
 **B.read** · *because reading shouldn't feel like work.*
 
-<sub>Built with Rust, React and a lot of open tabs.</sub>
-
 </div>
-=======
-# B.Read
-
-### Better Read. Better Create. Better Work.
-
-![Development](https://img.shields.io/badge/STATUS-IN_DEVELOPMENT-8B5CF6?style=for-the-badge)
-![Tech](https://img.shields.io/badge/BUILT_WITH-RUST_+_REACT-orange?style=for-the-badge)
-![Desktop](https://img.shields.io/badge/DESKTOP-TAURI_2-24C8DB?style=for-the-badge)
-
-**A unified, lightweight workspace for documents, presentations, and PDFs.**
-
-Read. Create. Edit. Annotate. Understand.
-
----
-
-> [!IMPORTANT]
-> B.Read is an actively developed project. Features described in this README represent the product vision and development roadmap. Not all functionality is currently implemented.
-
-## ◈ Better Read. Beyond Reading.
-
-Documents are more than files. They are ideas, knowledge, research, lectures, and stories.
-
-Yet working with them often means switching between multiple applications, disconnected workflows, and unnecessarily complicated tools.
-
-**B.Read aims to change that.**
-
-A unified desktop application that brings document creation, presentation editing, and PDF reading into one coherent workspace.
-
-- Open a DOCX and write.
-- Open a PPTX and create.
-- Open a PDF and explore, annotate, study, and edit.
-
-**Three formats. One workspace. A better way to work.**
->>>>>>> 0afb113795a81372ee43bfb8e723081b50970a7b
